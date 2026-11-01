@@ -1,4 +1,4 @@
-# fly.toml app configuration file generated for syncparty
+# fly.toml app configuration file generated for syncparty on 2026-11-01T08:14:04Z
 #
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 #
@@ -17,6 +17,7 @@ primary_region = 'sin'
   processes = ['app']
 
 [[vm]]
+  memory = '256mb'
   cpu_kind = 'shared'
   cpus = 1
-  memory = '256mb'
+  memory_mb = 256
