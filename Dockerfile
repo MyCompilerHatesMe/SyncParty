@@ -1,6 +1,7 @@
 # syntax = docker/dockerfile:1
 
-FROM node:22-slim AS build
+ARG NODE_VERSION=22-slim
+FROM node:${NODE_VERSION} AS build
 
 WORKDIR /app
 
@@ -13,7 +14,7 @@ COPY server ./server
 RUN cd server && npm run build
 
 # Runner stage - lightweight production image
-FROM node:22-slim AS runner
+FROM node:${NODE_VERSION} AS runner
 
 WORKDIR /app
 ENV NODE_ENV="production"

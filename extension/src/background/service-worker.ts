@@ -11,8 +11,21 @@ import {
   SyncActionPayload,
 } from '../shared/protocol';
 
-const DEFAULT_URL = 'ws://localhost:8080';
+const DEFAULT_URL = 'wss://syncparty.fly.dev';
 const KEEPALIVE_MS = 20_000;
+
+function normalizeServerUrl(rawUrl?: string): string {
+  if (!rawUrl || !rawUrl.trim()) return DEFAULT_URL;
+  let url = rawUrl.trim();
+  if (url.startsWith('https://')) {
+    url = 'wss://' + url.slice('https://'.length);
+  } else if (url.startsWith('http://')) {
+    url = 'ws://' + url.slice('http://'.length);
+  } else if (!url.startsWith('ws://') && !url.startsWith('wss://')) {
+    url = 'wss://' + url;
+  }
+  return url.replace(/\/+$/, '');
+}
 
 interface TabSession {
   tabId: number;
@@ -382,15 +395,27 @@ browserApi.runtime.onMessage.addListener(
 
       case 'UI_UPDATE_SERVER_URL':
         if (msg.serverUrl?.trim()) {
-          s.state.serverUrl = msg.serverUrl.trim();
+          const nextUrl = normalizeServerUrl(msg.serverUrl);
+          if (nextUrl !== s.state.serverUrl) {
+            s.state.serverUrl = nextUrl;
+            killWs(s);
+            s.state.connectionStatus = 'disconnected';
+            connectWs(s, () => {});
+          }
           syncUI(s);
         }
         sendResponse({ state: s.state });
         return false;
 
-      case 'UI_CREATE_ROOM':
+      case 'UI_CREATE_ROOM': {
         if (msg.nickname?.trim()) s.state.nickname = msg.nickname.trim().slice(0, 24);
-        if (msg.serverUrl?.trim()) s.state.serverUrl = msg.serverUrl.trim();
+        if (msg.serverUrl?.trim()) {
+          const nextUrl = normalizeServerUrl(msg.serverUrl);
+          if (nextUrl !== s.state.serverUrl) {
+            s.state.serverUrl = nextUrl;
+            killWs(s);
+          }
+        }
 
         connectWs(s, () => {
           sendWs(s, {
@@ -405,6 +430,7 @@ browserApi.runtime.onMessage.addListener(
         });
         sendResponse({ ok: true });
         return false;
+      }
 
       case 'UI_JOIN_ROOM': {
         const code = msg.roomId?.trim().toUpperCase();
@@ -415,7 +441,13 @@ browserApi.runtime.onMessage.addListener(
           return false;
         }
         if (msg.nickname?.trim()) s.state.nickname = msg.nickname.trim().slice(0, 24);
-        if (msg.serverUrl?.trim()) s.state.serverUrl = msg.serverUrl.trim();
+        if (msg.serverUrl?.trim()) {
+          const nextUrl = normalizeServerUrl(msg.serverUrl);
+          if (nextUrl !== s.state.serverUrl) {
+            s.state.serverUrl = nextUrl;
+            killWs(s);
+          }
+        }
 
         connectWs(s, () => {
           sendWs(s, {

@@ -33,11 +33,11 @@ export class FloatingDock {
 
   private draftNickname = '';
   private draftRoomCode = '';
-  private draftServerUrl = 'ws://localhost:8080';
+  private draftServerUrl = 'wss://syncparty.fly.dev';
 
   private state: TabSyncState = {
     connectionStatus: 'disconnected',
-    serverUrl: 'ws://localhost:8080',
+    serverUrl: 'wss://syncparty.fly.dev',
     roomId: null,
     clientId: null,
     nickname: '',
@@ -381,7 +381,7 @@ export class FloatingDock {
               id="sp-server-input"
               type="text"
               value="${this.esc(this.draftServerUrl)}"
-              placeholder="ws://localhost:8080"
+              placeholder="wss://syncparty.fly.dev"
               class="flex-1 bg-zinc-900 border border-zinc-800 rounded px-2 py-1 text-xs font-mono text-zinc-200 focus:outline-none focus:border-red-600"
             />
             <button id="sp-save-server-btn" class="px-2.5 py-1 bg-zinc-800 hover:bg-zinc-700 text-xs font-medium text-zinc-200 rounded border border-zinc-700 cursor-pointer">
