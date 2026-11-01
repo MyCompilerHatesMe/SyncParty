@@ -1,0 +1,46 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:host {
+  all: initial !important;
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  position: fixed !important;
+  top: 0px !important;
+  left: 0px !important;
+  width: 0px !important;
+  height: 0px !important;
+  z-index: 2147483640 !important;
+  pointer-events: none !important;
+  font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif !important;
+  color: #f4f4f5 !important;
+  line-height: 1.4 !important;
+  -webkit-font-smoothing: antialiased !important;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.sp-panel {
+  background: #111113;
+  border: 1px solid #27272a;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.8);
+  will-change: transform;
+  contain: layout style;
+}
+
+.sp-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.sp-scrollbar::-webkit-scrollbar-track {
+  background: #18181b;
+}
+
+.sp-scrollbar::-webkit-scrollbar-thumb {
+  background: #3f3f46;
+  border-radius: 2px;
+}

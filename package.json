@@ -1,0 +1,17 @@
+{
+  "name": "syncparty-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "SyncParty — End-to-End Universal HTML5 Video Watch-Party System (Chrome + Firefox MV3 + WebSocket Relay)",
+  "scripts": {
+    "install:all": "npm --prefix server install && npm --prefix extension install",
+    "build": "npm --prefix server run build && npm --prefix extension run build",
+    "build:server": "npm --prefix server run build",
+    "build:extension": "npm --prefix extension run build",
+    "build:chrome": "npm --prefix extension run build:chrome",
+    "build:firefox": "npm --prefix extension run build:firefox",
+    "start:server": "npm --prefix server start",
+    "dev:server": "npm --prefix server run dev",
+    "test:server": "npm --prefix server test"
+  }
+}

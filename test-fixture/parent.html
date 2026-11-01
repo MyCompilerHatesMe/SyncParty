@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SyncParty Test Fixture — Multi-Host Aggregator Simulation</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 24px;
+      background: #090d16;
+      color: #e2e8f0;
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+    .container {
+      max-width: 960px;
+      margin: 0 auto;
+    }
+    .header {
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #1e293b;
+    }
+    .badge {
+      display: inline-block;
+      background: #312e81;
+      color: #c7d2fe;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 999px;
+      margin-bottom: 8px;
+    }
+    .iframe-shell {
+      width: 100%;
+      height: 540px;
+      border: 2px solid #334155;
+      border-radius: 12px;
+      overflow: hidden;
+      background: #000;
+    }
+    .decoy-ad {
+      margin-top: 16px;
+      padding: 12px;
+      background: #1e293b;
+      border: 1px dashed #475569;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <span class="badge">TOP FRAME (window === window.top)</span>
+      <h1 style="margin: 4px 0; font-size: 22px;">StreamAggregator Test Page (Nested Iframes + Decoy Ads)</h1>
+      <p style="margin: 4px 0; color: #94a3b8; font-size: 14px;">
+        Topology: <code>parent.html</code> &rarr; <code>iframe-wrapper.html</code> &rarr; <code>iframe-player.html (&lt;video&gt;)</code>
+      </p>
+    </div>
+
+    <!-- Nested Wrapper Iframe -->
+    <iframe class="iframe-shell" src="./iframe-wrapper.html" allow="autoplay; fullscreen"></iframe>
+
+    <!-- Small Decoy Banner Video (< 400x250, ignored by VideoHunter) -->
+    <div class="decoy-ad">
+      <video width="180" height="90" muted loop autoplay playsinline>
+        <source src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4" type="video/mp4" />
+      </video>
+      <div>
+        <strong style="color: #f59e0b;">Decoy Ad Banner Video (180×90, 15s)</strong>
+        <p style="margin: 4px 0 0; font-size: 13px; color: #94a3b8;">
+          SyncParty's heuristic scorer automatically rejects this small banner video and locks onto the feature stream inside the nested leaf iframe. Or click <b>🎯 Select Video</b> in the dock to pick any element manually!
+        </p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

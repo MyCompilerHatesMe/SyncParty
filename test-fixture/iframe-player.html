@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Leaf Player Iframe</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background: #000;
+      display: flex;
+      flex-direction: column;
+      font-family: system-ui, sans-serif;
+      color: #e2e8f0;
+    }
+    .toolbar {
+      background: #111827;
+      padding: 6px 12px;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid #1f2937;
+    }
+    .btn {
+      background: #4f46e5;
+      color: #fff;
+      border: none;
+      padding: 4px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .btn:hover {
+      background: #6366f1;
+    }
+    .player-wrap {
+      flex: 1;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    video {
+      width: 100%;
+      height: 100%;
+      max-height: 460px;
+      background: #000;
+    }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <span>🎬 <strong>LEAF PLAYER IFRAME (depth = 2)</strong> — Big Buck Bunny (596s Feature Video &gt; 180s)</span>
+    <div>
+      <button class="btn" id="sim-preroll-btn">Simulate 15s Pre-Roll Ad &rarr; Feature Switch</button>
+    </div>
+  </div>
+  <div class="player-wrap">
+    <!-- Feature Video (duration ~596 seconds > 180s heuristic threshold) -->
+    <video
+      id="feature-video"
+      controls
+      preload="metadata"
+      src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+    ></video>
+  </div>
+
+  <script>
+    const video = document.getElementById('feature-video');
+    const btn = document.getElementById('sim-preroll-btn');
+    const AD_SRC = 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4'; // 15s ad
+    const FEATURE_SRC = 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4'; // 596s movie
+
+    btn.addEventListener('click', () => {
+      btn.textContent = 'Playing 15s Pre-Roll Ad (Unlocked)... Switching to Feature in 3s...';
+      video.src = AD_SRC;
+      video.play().catch(() => {});
+      setTimeout(() => {
+        btn.textContent = 'Switched to Feature Stream (596s) — SyncParty Re-Locked!';
+        video.src = FEATURE_SRC;
+        video.load();
+      }, 3000);
+    });
+  </script>
+</body>
+</html>

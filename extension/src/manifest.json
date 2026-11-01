@@ -1,0 +1,39 @@
+{
+  "manifest_version": 3,
+  "name": "SyncParty — Universal Video Watch Party",
+  "version": "1.0.0",
+  "description": "Synchronize HTML5 video playback across arbitrary streaming and embed sites with nested cross-origin iframe and ad-hygiene support.",
+  "permissions": [
+    "activeTab",
+    "storage",
+    "scripting"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self';"
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "all_frames": true,
+      "match_origin_as_fallback": true,
+      "match_about_blank": true,
+      "run_at": "document_end"
+    }
+  ],
+  "icons": {
+    "16": "assets/icon16.png",
+    "48": "assets/icon48.png",
+    "128": "assets/icon128.png"
+  },
+  "action": {
+    "default_title": "SyncParty Watch Party"
+  }
+}

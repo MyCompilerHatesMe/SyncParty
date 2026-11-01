@@ -1,0 +1,21 @@
+{
+  "name": "syncparty-relay-server",
+  "version": "1.0.0",
+  "description": "WebSocket Relay Server for SyncParty Watch-Party Extension",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx watch src/index.ts",
+    "test": "tsx tests/mockClient.ts"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/ws": "^8.5.12",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.2"
+  }
+}
