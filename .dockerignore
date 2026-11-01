@@ -1,0 +1,17 @@
+# dependencies
+node_modules/
+package-lock.json
+!extension/package-lock.json
+!server/package-lock.json
+
+# build outputs
+dist/
+server/dist/
+extension/dist/
+
+# misc
+*.log
+.DS_Store
+Thumbs.db
+.env
+.env.*
