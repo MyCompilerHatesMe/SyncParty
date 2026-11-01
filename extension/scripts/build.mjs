@@ -11,9 +11,96 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ROOT = path.resolve(__dirname, '..');
 
-/**
- * Generates a crimson-red RGBA PNG icon for SyncParty using Node's built-in zlib.
- */
+function crc32(buf) {
+  let crc = 0xffffffff;
+  for (let i = 0; i < buf.length; i++) {
+    crc ^= buf[i];
+    for (let j = 0; j < 8; j++) {
+      crc = (crc >>> 1) ^ (crc & 1 ? 0xedb88320 : 0);
+    }
+  }
+  return (crc ^ 0xffffffff) >>> 0;
+}
+
+// builds a store-ready .zip with forward-slash paths and manifest.json at root
+function createZipFromDir(sourceDir, outZipPath) {
+  const files = [];
+  function walk(dir, prefix = '') {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      const rel = prefix ? `${prefix}/${entry.name}` : entry.name;
+      if (entry.isDirectory()) walk(full, rel);
+      else files.push({ full, rel });
+    }
+  }
+  walk(sourceDir);
+
+  const localHeaders = [];
+  const centralHeaders = [];
+  let offset = 0;
+
+  for (const f of files) {
+    const raw = fs.readFileSync(f.full);
+    const compressed = zlib.deflateRawSync(raw);
+    const nameBuf = Buffer.from(f.rel, 'utf8');
+    const crc = crc32(raw);
+
+    const local = Buffer.alloc(30 + nameBuf.length);
+    local.writeUInt32LE(0x04034b50, 0);
+    local.writeUInt16LE(20, 4);
+    local.writeUInt16LE(0, 6);
+    local.writeUInt16LE(8, 8); // deflate
+    local.writeUInt16LE(0, 10);
+    local.writeUInt16LE(0, 12);
+    local.writeUInt32LE(crc, 14);
+    local.writeUInt32LE(compressed.length, 18);
+    local.writeUInt32LE(raw.length, 22);
+    local.writeUInt16LE(nameBuf.length, 26);
+    local.writeUInt16LE(0, 28);
+    nameBuf.copy(local, 30);
+
+    const central = Buffer.alloc(46 + nameBuf.length);
+    central.writeUInt32LE(0x02014b50, 0);
+    central.writeUInt16LE(20, 4);
+    central.writeUInt16LE(20, 6);
+    central.writeUInt16LE(0, 8);
+    central.writeUInt16LE(8, 10);
+    central.writeUInt16LE(0, 12);
+    central.writeUInt16LE(0, 14);
+    central.writeUInt32LE(crc, 16);
+    central.writeUInt32LE(compressed.length, 20);
+    central.writeUInt32LE(raw.length, 24);
+    central.writeUInt16LE(nameBuf.length, 28);
+    central.writeUInt16LE(0, 30);
+    central.writeUInt16LE(0, 32);
+    central.writeUInt16LE(0, 34);
+    central.writeUInt16LE(0, 36);
+    central.writeUInt32LE(0, 38);
+    central.writeUInt32LE(offset, 42);
+    nameBuf.copy(central, 46);
+
+    localHeaders.push(local, compressed);
+    centralHeaders.push(central);
+    offset += local.length + compressed.length;
+  }
+
+  const centralSize = centralHeaders.reduce((acc, b) => acc + b.length, 0);
+  const eocd = Buffer.alloc(22);
+  eocd.writeUInt32LE(0x06054b50, 0);
+  eocd.writeUInt16LE(0, 4);
+  eocd.writeUInt16LE(0, 6);
+  eocd.writeUInt16LE(files.length, 8);
+  eocd.writeUInt16LE(files.length, 10);
+  eocd.writeUInt32LE(centralSize, 12);
+  eocd.writeUInt32LE(offset, 16);
+  eocd.writeUInt16LE(0, 20);
+
+  fs.writeFileSync(
+    outZipPath,
+    Buffer.concat([...localHeaders, ...centralHeaders, eocd])
+  );
+}
+
 function createIconPng(size) {
   const width = size;
   const height = size;
@@ -53,25 +140,13 @@ function createIconPng(size) {
         rawData[pxOffset + 2] = 255;
         rawData[pxOffset + 3] = 255;
       } else {
-        // Deep red / crimson fill (#dc2626 -> #b91c1c)
         const t = (x + y) / (width + height);
-        rawData[pxOffset] = Math.round(220 - t * 35); // R
-        rawData[pxOffset + 1] = Math.round(38 - t * 10);  // G
-        rawData[pxOffset + 2] = Math.round(38 - t * 10);  // B
-        rawData[pxOffset + 3] = 255;                      // A
+        rawData[pxOffset] = Math.round(220 - t * 35);
+        rawData[pxOffset + 1] = Math.round(38 - t * 10);
+        rawData[pxOffset + 2] = Math.round(38 - t * 10);
+        rawData[pxOffset + 3] = 255;
       }
     }
-  }
-
-  function crc32(buf) {
-    let crc = 0xffffffff;
-    for (let i = 0; i < buf.length; i++) {
-      crc ^= buf[i];
-      for (let j = 0; j < 8; j++) {
-        crc = (crc >>> 1) ^ (crc & 1 ? 0xedb88320 : 0);
-      }
-    }
-    return (crc ^ 0xffffffff) >>> 0;
   }
 
   function makeChunk(type, data) {
@@ -171,7 +246,9 @@ async function buildTarget(target) {
     );
   }
 
-  console.log(`[build] Output ready: dist/${target}`);
+  const zipPath = path.join(ROOT, 'dist', `syncparty-${target}.zip`);
+  createZipFromDir(outDir, zipPath);
+  console.log(`[build] Output ready: dist/${target} (and dist/syncparty-${target}.zip)`);
 }
 
 async function main() {

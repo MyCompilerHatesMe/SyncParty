@@ -34,6 +34,11 @@
     "128": "assets/icon128.png"
   },
   "action": {
-    "default_title": "SyncParty Watch Party"
+    "default_title": "SyncParty Watch Party",
+    "default_icon": {
+      "16": "assets/icon16.png",
+      "48": "assets/icon48.png",
+      "128": "assets/icon128.png"
+    }
   }
 }

@@ -92,10 +92,17 @@ export class PickerOverlay {
         alignItems: 'center',
         gap: '8px',
       });
-      b.innerHTML = `
-        <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#ef4444;"></span>
-        <span>Click video player to lock sync (ESC to cancel)</span>
-      `;
+      const dot = document.createElement('span');
+      Object.assign(dot.style, {
+        display: 'inline-block',
+        width: '6px',
+        height: '6px',
+        borderRadius: '50%',
+        background: '#ef4444',
+      });
+      const label = document.createElement('span');
+      label.textContent = 'Click video player to lock sync (ESC to cancel)';
+      b.append(dot, label);
       shadow.appendChild(b);
       this.banner = b;
     }

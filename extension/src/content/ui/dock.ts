@@ -7,6 +7,12 @@ import { DOCK_STYLES } from './compiledStyles';
 
 export const DOCK_TAG = 'sp-ext-dock';
 
+const domParser = new DOMParser();
+function setHtml(el: HTMLElement, html: string) {
+  const doc = domParser.parseFromString(html, 'text/html');
+  el.replaceChildren(...Array.from(doc.body.childNodes));
+}
+
 export class FloatingDock {
   private hostEl: HTMLElement | null = null;
   private shadowRoot: ShadowRoot | null = null;
@@ -267,12 +273,12 @@ export class FloatingDock {
     const selPos = (activeEl as HTMLInputElement | null)?.selectionStart ?? null;
 
     if (this.isCollapsed) {
-      this.containerEl.innerHTML = this.renderPill();
+      setHtml(this.containerEl, this.renderPill());
       this.bindPill();
       return;
     }
 
-    this.containerEl.innerHTML = this.renderPanel();
+    setHtml(this.containerEl, this.renderPanel());
     this.bindPanel();
 
     if (activeId && this.shadowRoot) {
