@@ -4,7 +4,7 @@
   "private": true,
   "description": "SyncParty — End-to-End Universal HTML5 Video Watch-Party System (Chrome + Firefox MV3 + WebSocket Relay)",
   "scripts": {
-    "build": "npm --prefix server install && npm --prefix server run build",
+    "build": "npm --prefix server install --include=dev && npm --prefix server run build",
     "start": "npm --prefix server start",
     "install:all": "npm --prefix server install && npm --prefix extension install",
     "build:all": "npm --prefix server run build && npm --prefix extension run build",

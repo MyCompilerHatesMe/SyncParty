@@ -1,42 +1,32 @@
 # syntax = docker/dockerfile:1
 
-# Adjust NODE_VERSION as desired
-ARG NODE_VERSION=22.21.1
-FROM node:${NODE_VERSION}-slim AS base
+ARG NODE_VERSION=22-slim
+FROM node:${NODE_VERSION} AS build
 
-LABEL fly_launch_runtime="Node.js"
-
-# Node.js app lives here
 WORKDIR /app
 
-# Set production environment
+# Copy server package files and install all dependencies (including tsc)
+COPY server/package*.json ./server/
+RUN cd server && npm install
+
+# Copy server source and compile TypeScript
+COPY server ./server
+RUN cd server && npm run build
+
+# Runner stage - lightweight production image
+FROM node:${NODE_VERSION} AS runner
+
+WORKDIR /app
 ENV NODE_ENV="production"
+ENV PORT=8080
 
+# Install production dependencies only
+COPY server/package*.json ./
+RUN npm install --omit=dev
 
-# Throw-away build stage to reduce size of final image
-FROM base AS build
+# Copy compiled JavaScript from build stage
+COPY --from=build /app/server/dist ./dist
 
-# Install packages needed to build node modules
-RUN apt-get update -qq && \
-    apt-get install --no-install-recommends -y build-essential node-gyp pkg-config python-is-python3
+EXPOSE 8080
 
-# Install node modules
-COPY package.json ./
-RUN npm install
-
-# Copy application code
-COPY . .
-
-# Build application
-RUN npm run build
-
-
-# Final stage for app image
-FROM base
-
-# Copy built application
-COPY --from=build /app /app
-
-# Start the server by default, this can be overwritten at runtime
-EXPOSE 3000
-CMD [ "npm", "run", "start" ]
+CMD [ "node", "dist/index.js" ]
