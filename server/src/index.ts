@@ -161,8 +161,8 @@ export function startServer(port: number = PORT) {
 
   wss.on('close', () => clearInterval(pingTimer));
 
-  server.listen(port, '0.0.0.0', () => {
-    console.log(`relay listening on port ${port}`);
+  server.listen(port, () => {
+    console.log(`relay listening on ws://localhost:${port}`);
   });
 
   return { server, wss, roomManager };
