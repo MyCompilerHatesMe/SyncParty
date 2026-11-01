@@ -59,12 +59,14 @@ If a site has a nuclear uBlock rule like `*##body > *:not(#app)` that still hide
 *#@#sp-ext-picker
 ```
 
-## Deploying to production
+## Self-hosting / Private Relay Setup
+
+If you want to run your own private relay server instead of localhost:
 
 1. **Host the relay server (`server/`)**:
-   Push `server/` to Railway, Render, or Fly.io (`npm install && npm run build`, start with `npm start`). They give you a free `wss://` URL automatically (browsers block plain `ws://` on real websites unless it's localhost).
-2. **Set the server URL**:
-   Either paste your `wss://...` URL into the **Server** input inside the extension UI, or change `DEFAULT_URL` in `extension/src/background/service-worker.ts` and `draftServerUrl` in `extension/src/content/ui/dock.ts` before running `npm run build`.
-3. **Share with friends**:
-   - **Chrome / Brave**: Zip `extension/dist/chrome`, send it to them, load unpacked.
-   - **Firefox**: Zip the files inside `extension/dist/firefox`, upload to [addons.mozilla.org/developers](https://addons.mozilla.org/developers/) under **"On your own" (self-distributed)**. Mozilla auto-signs it in ~2 minutes and gives you a `.xpi` file anyone can drag into Firefox to install permanently.
+   Throw `server/` on Railway, Render, Fly.io, or your own VPS (`npm install && npm run build`, start with `npm start`). You'll need a `wss://` endpoint since browsers block unencrypted `ws://` on external HTTPS sites.
+2. **Connect the extension**:
+   Either paste your `wss://...` URL directly into the **Server** input inside the extension UI, or change `DEFAULT_URL` in `extension/src/background/service-worker.ts` before running `npm run build`.
+3. **Distributing to friends**:
+   - **Chrome / Brave**: Zip `extension/dist/chrome`, send it over, load unpacked in `chrome://extensions`.
+   - **Firefox**: Zip the contents of `extension/dist/firefox`, upload to [addons.mozilla.org/developers](https://addons.mozilla.org/developers/) under **"On your own" (self-distributed)**. Mozilla auto-signs it in ~2 minutes and gives you a `.xpi` file anyone can drag and drop into Firefox to install permanently.
