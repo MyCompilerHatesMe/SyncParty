@@ -51,6 +51,8 @@ export type ContentToBackgroundMessage =
     }
   | { type: 'UI_LEAVE_ROOM' }
   | { type: 'UI_REQUEST_RESYNC' }
+  | { type: 'UI_UPDATE_NICKNAME'; nickname: string }
+  | { type: 'HEARTBEAT_PING' }
   | { type: 'UI_UPDATE_SERVER_URL'; serverUrl: string }
   | { type: 'UI_TOGGLE_PICKER'; active?: boolean }
   | { type: 'PICKER_FORCE_SCAN_FRAMES' }

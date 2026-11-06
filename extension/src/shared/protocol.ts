@@ -49,6 +49,7 @@ export type ClientToServerMessage =
   | { action: 'SYNC_ACTION'; payload: SyncActionPayload }
   | { action: 'UPDATE_MEDIA'; media: HostMediaInfo }
   | { action: 'REQUEST_SYNC' }
+  | { action: 'UPDATE_NICKNAME'; nickname: string }
   | { action: 'PING' };
 
 export type ServerToClientMessage =

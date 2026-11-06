@@ -252,6 +252,27 @@ export class RoomManager {
       }));
   }
 
+  updateNickname(clientId: string, newNickname: string) {
+    const client = this.clients.get(clientId);
+    if (!client) return;
+    const name = newNickname.trim().slice(0, 24);
+    if (!name) return;
+    client.nickname = name;
+
+    if (client.roomId) {
+      const room = this.rooms.get(client.roomId);
+      if (room) {
+        this.broadcastToRoom(room.id, {
+          event: 'ROOM_UPDATED',
+          roomId: room.id,
+          participants: this.getParticipantList(room),
+          hostId: room.hostId,
+          hostMedia: room.playbackState.hostMedia,
+        });
+      }
+    }
+  }
+
   leaveRoom(clientId: string) {
     const client = this.clients.get(clientId);
     if (!client || !client.roomId) return;

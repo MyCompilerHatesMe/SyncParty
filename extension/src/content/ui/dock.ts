@@ -34,6 +34,8 @@ export class FloatingDock {
   private draftNickname = '';
   private draftRoomCode = '';
   private draftServerUrl = 'wss://syncparty.fly.dev';
+  private isEditingNickname = false;
+  private heartbeatTimer: number | null = null;
 
   private state: TabSyncState = {
     connectionStatus: 'disconnected',
@@ -63,6 +65,13 @@ export class FloatingDock {
         (document.body || document.documentElement)?.appendChild(this.hostEl);
       }
     }, 1500);
+
+    // Keepalive heartbeat: keeps Chrome MV3 service worker & WebSocket permanently active
+    this.heartbeatTimer = window.setInterval(() => {
+      browserApi.runtime
+        .sendMessage({ type: 'HEARTBEAT_PING' } satisfies ContentToBackgroundMessage)
+        .catch(() => {});
+    }, 15_000);
 
     window.addEventListener(
       'resize',
@@ -148,7 +157,7 @@ export class FloatingDock {
       this.isHidden = false;
     }
     this.state = next;
-    if (!this.draftNickname && next.nickname) this.draftNickname = next.nickname;
+    if (!this.isEditingNickname && next.nickname) this.draftNickname = next.nickname;
     if (next.serverUrl) this.draftServerUrl = next.serverUrl;
     this.render();
   }
@@ -374,19 +383,38 @@ export class FloatingDock {
 
     const settingsHtml = this.showSettings
       ? `
-        <div class="pt-2.5 border-t border-zinc-800 space-y-1.5">
-          <label class="block text-[10px] font-medium uppercase tracking-wider text-zinc-500">Relay Server</label>
-          <div class="flex gap-1.5">
-            <input
-              id="sp-server-input"
-              type="text"
-              value="${this.esc(this.draftServerUrl)}"
-              placeholder="wss://syncparty.fly.dev"
-              class="flex-1 bg-zinc-900 border border-zinc-800 rounded px-2 py-1 text-xs font-mono text-zinc-200 focus:outline-none focus:border-red-600"
-            />
-            <button id="sp-save-server-btn" class="px-2.5 py-1 bg-zinc-800 hover:bg-zinc-700 text-xs font-medium text-zinc-200 rounded border border-zinc-700 cursor-pointer">
-              Save
-            </button>
+        <div class="pt-2.5 border-t border-zinc-800 space-y-2">
+          <div>
+            <label class="block text-[10px] font-medium uppercase tracking-wider text-zinc-500 mb-1">Your Name</label>
+            <div class="flex gap-1.5">
+              <input
+                id="sp-setting-name-input"
+                type="text"
+                maxlength="24"
+                value="${this.esc(this.draftNickname || this.state.nickname)}"
+                placeholder="Nickname"
+                class="flex-1 bg-zinc-900 border border-zinc-800 rounded px-2 py-1 text-xs text-zinc-200 focus:outline-none focus:border-red-600"
+              />
+              <button id="sp-save-name-btn" class="px-2.5 py-1 bg-zinc-800 hover:bg-zinc-700 text-xs font-medium text-zinc-200 rounded border border-zinc-700 cursor-pointer">
+                Save
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-[10px] font-medium uppercase tracking-wider text-zinc-500 mb-1">Relay Server</label>
+            <div class="flex gap-1.5">
+              <input
+                id="sp-server-input"
+                type="text"
+                value="${this.esc(this.draftServerUrl)}"
+                placeholder="wss://syncparty.fly.dev"
+                class="flex-1 bg-zinc-900 border border-zinc-800 rounded px-2 py-1 text-xs font-mono text-zinc-200 focus:outline-none focus:border-red-600"
+              />
+              <button id="sp-save-server-btn" class="px-2.5 py-1 bg-zinc-800 hover:bg-zinc-700 text-xs font-medium text-zinc-200 rounded border border-zinc-700 cursor-pointer">
+                Save
+              </button>
+            </div>
           </div>
         </div>
       `
@@ -402,7 +430,7 @@ export class FloatingDock {
           </div>
           <div class="flex items-center gap-1">
             <button id="sp-settings-btn" class="px-1.5 py-0.5 text-[11px] text-zinc-400 hover:text-zinc-200 rounded cursor-pointer">
-              Server
+              Settings
             </button>
             <button id="sp-collapse-btn" class="px-1.5 py-0.5 text-xs font-mono text-zinc-400 hover:text-zinc-200 rounded cursor-pointer" title="Minimize">
               -
@@ -526,6 +554,27 @@ export class FloatingDock {
     const list = this.state.participants
       .map((p) => {
         const me = p.id === this.state.clientId;
+        if (me && this.isEditingNickname) {
+          return `
+            <div class="flex items-center gap-1.5 py-1 px-2 rounded bg-zinc-900 border border-zinc-700 text-xs">
+              <input
+                id="sp-inline-name-input"
+                type="text"
+                maxlength="24"
+                value="${this.esc(this.draftNickname || p.nickname)}"
+                placeholder="Nickname"
+                class="flex-1 min-w-0 bg-zinc-950 border border-zinc-700 rounded px-1.5 py-0.5 text-xs text-zinc-100 focus:outline-none focus:border-red-600"
+              />
+              <button id="sp-inline-name-save-btn" class="px-2 py-0.5 rounded bg-red-600 hover:bg-red-500 text-[10px] text-white font-medium cursor-pointer">
+                save
+              </button>
+              <button id="sp-inline-name-cancel-btn" class="px-1.5 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-[10px] text-zinc-400 cursor-pointer">
+                x
+              </button>
+            </div>
+          `;
+        }
+
         return `
           <div class="flex items-center justify-between py-1 px-2 rounded bg-zinc-900 text-xs">
             <div class="flex items-center gap-1.5 truncate">
@@ -533,11 +582,14 @@ export class FloatingDock {
               <span class="text-zinc-200 truncate">${this.esc(p.nickname)}</span>
               ${me ? '<span class="text-[10px] text-zinc-500">(you)</span>' : ''}
             </div>
-            ${
-              p.isHost
-                ? '<span class="text-[9px] font-mono uppercase px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300 border border-zinc-700">host</span>'
-                : ''
-            }
+            <div class="flex items-center gap-1.5 shrink-0">
+              ${me ? '<button id="sp-rename-btn" class="text-[10px] text-zinc-400 hover:text-white underline cursor-pointer" title="Change your name">rename</button>' : ''}
+              ${
+                p.isHost
+                  ? '<span class="text-[9px] font-mono uppercase px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300 border border-zinc-700">host</span>'
+                  : ''
+              }
+            </div>
           </div>
         `;
       })
@@ -724,6 +776,50 @@ export class FloatingDock {
       }, 1500);
     });
 
+    // Inline rename in room user list
+    this.shadowRoot.getElementById('sp-rename-btn')?.addEventListener('click', () => {
+      this.isEditingNickname = true;
+      this.render(true);
+      const inp = this.shadowRoot?.getElementById('sp-inline-name-input') as HTMLInputElement | null;
+      inp?.focus();
+      inp?.select();
+    });
+
+    const saveInline = () => {
+      const inp = this.shadowRoot?.getElementById('sp-inline-name-input') as HTMLInputElement | null;
+      const val = inp?.value?.trim();
+      if (val) this.saveNickname(val);
+      this.isEditingNickname = false;
+      this.render(true);
+    };
+
+    this.shadowRoot.getElementById('sp-inline-name-save-btn')?.addEventListener('click', saveInline);
+    this.shadowRoot.getElementById('sp-inline-name-input')?.addEventListener('keydown', (e) => {
+      if ((e as KeyboardEvent).key === 'Enter') saveInline();
+      if ((e as KeyboardEvent).key === 'Escape') {
+        this.isEditingNickname = false;
+        this.render(true);
+      }
+    });
+    this.shadowRoot.getElementById('sp-inline-name-cancel-btn')?.addEventListener('click', () => {
+      this.isEditingNickname = false;
+      this.render(true);
+    });
+
+    // Rename in Settings dropdown
+    const saveSettingName = () => {
+      const inp = this.shadowRoot?.getElementById('sp-setting-name-input') as HTMLInputElement | null;
+      const val = inp?.value?.trim();
+      if (val) {
+        this.saveNickname(val);
+        this.render(true);
+      }
+    };
+    this.shadowRoot.getElementById('sp-save-name-btn')?.addEventListener('click', saveSettingName);
+    this.shadowRoot.getElementById('sp-setting-name-input')?.addEventListener('keydown', (e) => {
+      if ((e as KeyboardEvent).key === 'Enter') saveSettingName();
+    });
+
     const srv = this.shadowRoot.getElementById('sp-server-input') as HTMLInputElement | null;
     srv?.addEventListener('input', (e) => {
       this.draftServerUrl = (e.target as HTMLInputElement).value;
@@ -738,6 +834,15 @@ export class FloatingDock {
       this.showSettings = false;
       this.render(true);
     });
+  }
+
+  private saveNickname(name: string) {
+    this.draftNickname = name;
+    browserApi.storage.local.set({ sp_nickname: name });
+    browserApi.runtime.sendMessage({
+      type: 'UI_UPDATE_NICKNAME',
+      nickname: name,
+    } satisfies ContentToBackgroundMessage);
   }
 
   private joinRoom() {

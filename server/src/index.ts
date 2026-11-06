@@ -41,10 +41,12 @@ export function startServer(port: number = PORT) {
 
     ws.on('pong', () => {
       client.isAlive = true;
+      client.missedPings = 0;
     });
 
     ws.on('message', (rawData) => {
       client.isAlive = true;
+      client.missedPings = 0;
       let msg: ClientToServerMessage;
 
       try {
@@ -115,6 +117,12 @@ export function startServer(port: number = PORT) {
             break;
           }
 
+          case 'UPDATE_NICKNAME': {
+            if (!msg.nickname || typeof msg.nickname !== 'string') return;
+            roomManager.updateNickname(client.id, msg.nickname);
+            break;
+          }
+
           case 'PING': {
             roomManager.sendToClient(client, {
               event: 'PONG',
@@ -144,13 +152,18 @@ export function startServer(port: number = PORT) {
     ws.on('error', () => roomManager.removeClient(client.id));
   });
 
-  // kill dead sockets every 30s
+  // Soft ping check: allow 2 consecutive missed cycles before terminating
   const pingTimer = setInterval(() => {
     for (const client of roomManager.getAllClients()) {
       if (!client.isAlive) {
-        client.ws.terminate();
-        roomManager.removeClient(client.id);
-        continue;
+        client.missedPings = (client.missedPings || 0) + 1;
+        if (client.missedPings >= 2) {
+          client.ws.terminate();
+          roomManager.removeClient(client.id);
+          continue;
+        }
+      } else {
+        client.missedPings = 0;
       }
       client.isAlive = false;
       if (client.ws.readyState === WebSocket.OPEN) {

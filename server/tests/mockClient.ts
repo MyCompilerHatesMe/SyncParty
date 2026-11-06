@@ -18,11 +18,12 @@ function connectClient(url: string): Promise<{
 
     ws.on('message', (data) => {
       const msg = JSON.parse(data.toString()) as ServerToClientMessage;
-      messages.push(msg);
       const idx = waiters.findIndex((w) => w.event === msg.event);
       if (idx !== -1) {
         const [w] = waiters.splice(idx, 1);
         w.resolve(msg);
+      } else {
+        messages.push(msg);
       }
     });
 
@@ -75,6 +76,13 @@ async function runTests() {
       throw new Error('join state wrong');
     }
     await a.waitForEvent('ROOM_UPDATED');
+
+    // test dynamic nickname update
+    b.ws.send(JSON.stringify({ action: 'UPDATE_NICKNAME', nickname: 'bobby' }));
+    const nameUpdate = await a.waitForEvent('ROOM_UPDATED');
+    await b.waitForEvent('ROOM_UPDATED');
+    const bEntry = nameUpdate.participants.find((p) => p.nickname === 'bobby');
+    if (!bEntry) throw new Error('nickname update failed');
 
     a.ws.send(
       JSON.stringify({

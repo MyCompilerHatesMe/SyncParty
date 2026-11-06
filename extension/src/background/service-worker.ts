@@ -71,6 +71,14 @@ function getSession(tabId: number): TabSession {
       state: makeState(),
     };
     sessions.set(tabId, s);
+
+    browserApi.storage.local
+      .get<{ sp_nickname?: string; sp_serverUrl?: string }>(['sp_nickname', 'sp_serverUrl'])
+      .then((stored) => {
+        if (stored?.sp_nickname) s!.state.nickname = stored.sp_nickname;
+        if (stored?.sp_serverUrl) s!.state.serverUrl = normalizeServerUrl(stored.sp_serverUrl);
+      })
+      .catch(() => {});
   }
   return s;
 }
@@ -333,14 +341,32 @@ function connectWs(s: TabSession, onOpen: () => void, retried = false) {
     }
     if (s.ws === ws) {
       s.ws = null;
-      if (s.state.connectionStatus !== 'error') {
-        s.state.connectionStatus = 'disconnected';
+      const targetRoom = s.state.roomId;
+      if (targetRoom) {
+        // Unexpected disconnect while in room - attempt auto-reconnect
+        s.state.connectionStatus = 'connecting';
+        syncUI(s);
+        setTimeout(() => {
+          if (!s.state.roomId || s.ws) return;
+          connectWs(s, () => {
+            if (s.state.roomId) {
+              sendWs(s, {
+                action: 'JOIN_ROOM',
+                roomId: s.state.roomId,
+                nickname: s.state.nickname,
+              });
+            }
+          });
+        }, 2000);
+      } else {
+        if (s.state.connectionStatus !== 'error') {
+          s.state.connectionStatus = 'disconnected';
+        }
+        s.state.isHost = false;
+        s.state.participants = [];
+        s.state.hostMedia = null;
+        syncUI(s);
       }
-      s.state.roomId = null;
-      s.state.isHost = false;
-      s.state.participants = [];
-      s.state.hostMedia = null;
-      syncUI(s);
     }
   };
 }
@@ -408,7 +434,10 @@ browserApi.runtime.onMessage.addListener(
         return false;
 
       case 'UI_CREATE_ROOM': {
-        if (msg.nickname?.trim()) s.state.nickname = msg.nickname.trim().slice(0, 24);
+        if (msg.nickname?.trim()) {
+          s.state.nickname = msg.nickname.trim().slice(0, 24);
+          browserApi.storage.local.set({ sp_nickname: s.state.nickname });
+        }
         if (msg.serverUrl?.trim()) {
           const nextUrl = normalizeServerUrl(msg.serverUrl);
           if (nextUrl !== s.state.serverUrl) {
@@ -440,7 +469,10 @@ browserApi.runtime.onMessage.addListener(
           sendResponse({ ok: false });
           return false;
         }
-        if (msg.nickname?.trim()) s.state.nickname = msg.nickname.trim().slice(0, 24);
+        if (msg.nickname?.trim()) {
+          s.state.nickname = msg.nickname.trim().slice(0, 24);
+          browserApi.storage.local.set({ sp_nickname: s.state.nickname });
+        }
         if (msg.serverUrl?.trim()) {
           const nextUrl = normalizeServerUrl(msg.serverUrl);
           if (nextUrl !== s.state.serverUrl) {
@@ -460,11 +492,53 @@ browserApi.runtime.onMessage.addListener(
         return false;
       }
 
+      case 'UI_UPDATE_NICKNAME': {
+        const name = msg.nickname?.trim().slice(0, 24);
+        if (name) {
+          s.state.nickname = name;
+          browserApi.storage.local.set({ sp_nickname: name });
+          if (s.state.clientId) {
+            const me = s.state.participants.find((p) => p.id === s.state.clientId);
+            if (me) me.nickname = name;
+          }
+          if (s.ws && s.ws.readyState === WebSocket.OPEN) {
+            sendWs(s, { action: 'UPDATE_NICKNAME', nickname: name });
+          }
+          syncUI(s);
+        }
+        sendResponse({ ok: true, nickname: s.state.nickname });
+        return false;
+      }
+
+      case 'HEARTBEAT_PING': {
+        if (s.ws && s.ws.readyState === WebSocket.OPEN) {
+          sendWs(s, { action: 'PING' });
+        } else if (s.state.roomId) {
+          connectWs(s, () => {
+            if (s.state.roomId) {
+              sendWs(s, {
+                action: 'JOIN_ROOM',
+                roomId: s.state.roomId,
+                nickname: s.state.nickname,
+              });
+            }
+          });
+        }
+        sendResponse({ ok: true });
+        return false;
+      }
+
       case 'UI_LEAVE_ROOM':
         if (s.ws && s.ws.readyState === WebSocket.OPEN) {
           sendWs(s, { action: 'LEAVE_ROOM' });
         }
+        s.state.roomId = null;
+        s.state.isHost = false;
+        s.state.participants = [];
+        s.state.hostMedia = null;
+        s.state.lastSyncNotification = 'left room';
         killWs(s);
+        s.state.connectionStatus = 'disconnected';
         syncUI(s);
         sendResponse({ ok: true });
         return false;
